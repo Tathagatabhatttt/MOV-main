@@ -1,0 +1,22 @@
+@import "tailwindcss";
+@import "mapbox-gl/dist/mapbox-gl.css";
+
+body {
+  background: #f6f8fc;
+  color: #0b0f1a;
+  font-family: Inter, system-ui, sans-serif;
+}
+
+.input {
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid #e4e7ec;
+  background: #f9fafb;
+}
+
+.input:focus {
+  outline: none;
+  border-color: #1f5eff;
+  box-shadow: 0 0 0 2px rgba(31, 94, 255, 0.15);
+}

@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MOVZZ - Namma Yatri Integration Test</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+
+        h1 {
+            color: #667eea;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+
+        .step {
+            margin-bottom: 30px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            border-left: 4px solid #667eea;
+        }
+
+        .step h3 {
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 18px;
+        }
+
+        input, button {
+            width: 100%;
+            padding: 12px;
+            margin: 8px 0;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        button {
+            background: #667eea;
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        button:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .result {
+            margin-top: 15px;
+            padding: 15px;
+            background: white;
+            border-radius: 8px;
+            border: 1px solid #e0e0e0;
+            font-size: 13px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .success {
+            color: #10b981;
+            font-weight: 600;
+        }
+
+        .error {
+            color: #ef4444;
+            font-weight: 600;
+        }
+
+        .ride-option {
+            padding: 15px;
+            margin: 10px 0;
+            background: white;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .ride-option:hover {
+            border-color: #667eea;
+            transform: translateX(5px);
+        }
+
+        .ride-option.selected {
+            border-color: #667eea;
+            background: #f0f4ff;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #667eea;
+        }
+
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚗 MOVZZ</h1>
+        <p class="subtitle">Namma Yatri Integration Test</p>
+
+        <!-- Step 1: Authentication -->
+        <div class="step">
+            <h3>Step 1: Authentication</h3>
+            <input type="tel" id="mobileNumber" placeholder="Mobile Number (e.g., +919876543210)" value="+91">
+            <button onclick="sendOTP()">Send OTP</button>
+            
+            <div id="otpSection" style="display: none;">
+                <input type="text" id="otp" placeholder="Enter OTP" maxlength="6">
+                <button onclick="verifyOTP()">Verify OTP</button>
+            </div>
+            
+            <div id="authResult" class="result" style="display: none;"></div>
+        </div>
+
+        <!-- Step 2: Search Rides -->
+        <div class="step">
+            <h3>Step 2: Search for Rides</h3>
+            <p style="margin-bottom: 10px; color: #666; font-size: 13px;">
+                From: Bangalore Airport<br>
+                To: MG Road, Bangalore
+            </p>
+            <button onclick="searchRides()" id="searchBtn" disabled>Search Rides</button>
+            <div id="searchResult" class="result" style="display: none;"></div>
+        </div>
+
+        <!-- Step 3: View Estimates -->
+        <div class="step">
+            <h3>Step 3: Available Rides</h3>
+            <div id="estimatesResult"></div>
+        </div>
+
+        <!-- Step 4: Book Ride -->
+        <div class="step">
+            <h3>Step 4: Book Ride</h3>
+            <button onclick="bookRide()" id="bookBtn" disabled>Book Selected Ride</button>
+            <div id="bookingResult" class="result" style="display: none;"></div>
+        </div>
+
+        <!-- Step 5: Track Ride -->
+        <div class="step">
+            <h3>Step 5: Track Ride</h3>
+            <button onclick="trackRide()" id="trackBtn" disabled>Track Ride Status</button>
+            <div id="trackingResult" class="result" style="display: none;"></div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:3000/api/rides';
+        const USER_ID = 'test-user-' + Date.now();
+        
+        let searchId = null;
+        let selectedEstimateId = null;
+        let bookingId = null;
+
+        async function sendOTP() {
+            const mobile = document.getElementById('mobileNumber').value;
+            const resultDiv = document.getElementById('authResult');
+            
+            resultDiv.style.display = 'block';
+            resultDiv.innerHTML = '<div class="loading">Sending OTP...</div>';
+
+            try {
+                const response = await fetch(`${API_BASE}/auth/send-otp`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ mobileNumber: mobile, userId: USER_ID })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    resultDiv.innerHTML = `<p class="success">✅ OTP sent successfully!</p>`;
+                    document.getElementById('otpSection').style.display = 'block';
+                } else {
+                    resultDiv.innerHTML = `<p class="error">❌ Error: ${JSON.stringify(data.error)}</p>`;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<p class="error">❌ Error: ${error.message}</p>`;
+            }
+        }
+
+        async function verifyOTP() {
+            const otp = document.getElementById('otp').value;
+            const resultDiv = document.getElementById('authResult');
+            
+            resultDiv.innerHTML = '<div class="loading">Verifying OTP...</div>';
+
+            try {
+                const response = await fetch(`${API_BASE}/auth/verify-otp`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ otp, userId: USER_ID })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    resultDiv.innerHTML = `
+                        <p class="success">✅ Authentication successful!</p>
+                        <p>User: ${data.data.person.firstName || 'User'}</p>
+                        <p style="font-size: 11px; color: #666;">Token: ${data.token.substring(0, 30)}...</p>
+                    `;
+                    document.getElementById('searchBtn').disabled = false;
+                } else {
+                    resultDiv.innerHTML = `<p class="error">❌ Error: ${JSON.stringify(data.error)}</p>`;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<p class="error">❌ Error: ${error.message}</p>`;
+            }
+        }
+
+        async function searchRides() {
+            const resultDiv = document.getElementById('searchResult');
+            resultDiv.style.display = 'block';
+            resultDiv.innerHTML = '<div class="loading"><div class="spinner"></div>Searching for rides...</div>';
+
+            const pickup = {
+                lat: 13.1986,
+                lon: 77.7066,
+                address: {
+                    area: "Devanahalli",
+                    city: "Bangalore",
+                    state: "Karnataka",
+                    country: "India",
+                    areaCode: "560300"
+                }
+            };
+
+            const dropoff = {
+                lat: 12.9716,
+                lon: 77.5946,
+                address: {
+                    area: "MG Road",
+                    city: "Bangalore",
+                    state: "Karnataka",
+                    country: "India",
+                    areaCode: "560001"
+                }
+            };
+
+            try {
+                const response = await fetch(`${API_BASE}/search`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ userId: USER_ID, pickup, dropoff })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    searchId = data.searchId;
+                    resultDiv.innerHTML = `<p class="success">✅ Search initiated! ID: ${searchId}</p>`;
+                    
+                    // Wait and get estimates
+                    setTimeout(getEstimates, 3000);
+                } else {
+                    resultDiv.innerHTML = `<p class="error">❌ Error: ${JSON.stringify(data.error)}</p>`;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<p class="error">❌ Error: ${error.message}</p>`;
+            }
+        }
+
+        async function getEstimates() {
+            const resultDiv = document.getElementById('estimatesResult');
+            resultDiv.innerHTML = '<div class="loading"><div class="spinner"></div>Getting estimates...</div>';
+
+            try {
+                const response = await fetch(`${API_BASE}/estimates/${searchId}?userId=${USER_ID}`);
+                const data = await response.json();
+
+                if (data.success && data.estimates.length > 0) {
+                    let html = '<p class="success">✅ Found ' + data.estimates.length + ' ride option(s):</p>';
+                    
+                    data.estimates.forEach((est, index) => {
+                        html += `
+                            <div class="ride-option" onclick="selectRide('${est.estimateId}', ${index})">
+                                <strong>${est.vehicleVariant}</strong><br>
+                                Fare: ₹${est.estimatedFare}<br>
+                                Duration: ${Math.round(est.estimatedDuration / 60)} mins<br>
+                                Distance: ${(est.estimatedDistance / 1000).toFixed(1)} km
+                            </div>
+                        `;
+                    });
+                    
+                    resultDiv.innerHTML = html;
+                } else {
+                    resultDiv.innerHTML = '<p class="error">❌ No rides available</p>';
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<p class="error">❌ Error: ${error.message}</p>`;
+            }
+        }
+
+        function selectRide(estimateId, index) {
+            selectedEstimateId = estimateId;
+            
+            // Highlight selected
+            document.querySelectorAll('.ride-option').forEach((el, i) => {
+                el.classList.toggle('selected', i === index);
+            });
+            
+            document.getElementById('bookBtn').disabled = false;
+        }
+
+        async function bookRide() {
+            const resultDiv = document.getElementById('bookingResult');
+            resultDiv.style.display = 'block';
+            resultDiv.innerHTML = '<div class="loading"><div class="spinner"></div>Booking ride...</div>';
+
+            try {
+                const response = await fetch(`${API_BASE}/book`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ userId: USER_ID, estimateId: selectedEstimateId })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    bookingId = data.bookingId;
+                    resultDiv.innerHTML = `
+                        <p class="success">✅ Ride booked successfully!</p>
+                        <p>Booking ID: ${bookingId}</p>
+                    `;
+                    document.getElementById('trackBtn').disabled = false;
+                } else {
+                    resultDiv.innerHTML = `<p class="error">❌ Error: ${JSON.stringify(data.error)}</p>`;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<p class="error">❌ Error: ${error.message}</p>`;
+            }
+        }
+
+        async function trackRide() {
+            const resultDiv = document.getElementById('trackingResult');
+            resultDiv.style.display = 'block';
+            resultDiv.innerHTML = '<div class="loading"><div class="spinner"></div>Tracking ride...</div>';
+
+            try {
+                const response = await fetch(`${API_BASE}/status/${bookingId}?userId=${USER_ID}`);
+                const data = await response.json();
+
+                if (data.success) {
+                    let html = `<p class="success">Status: ${data.status}</p>`;
+                    
+                    if (data.data.driver) {
+                        html += `
+                            <p><strong>Driver:</strong> ${data.data.driver.name}</p>
+                            <p><strong>Rating:</strong> ${data.data.driver.rating}⭐</p>
+                            <p><strong>Phone:</strong> ${data.data.driver.mobileNumber}</p>
+                        `;
+                    }
+                    
+                    if (data.data.vehicle) {
+                        html += `
+                            <p><strong>Vehicle:</strong> ${data.data.vehicle.color} ${data.data.vehicle.model}</p>
+                            <p><strong>Number:</strong> ${data.data.vehicle.number}</p>
+                        `;
+                    }
+                    
+                    resultDiv.innerHTML = html;
+                } else {
+                    resultDiv.innerHTML = `<p class="error">❌ Error: ${JSON.stringify(data.error)}</p>`;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<p class="error">❌ Error: ${error.message}</p>`;
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,4 +1,4 @@
-export default function RideCard({ provider, price, eta, rating, color, reliability, showReliability }) {
+export default function RideCard({ provider, price, eta, rating, color, reliability, showReliability, onBook, estimateId }) {
   const colorClasses = {
     gray: "from-gray-800 to-gray-700",
     blue: "from-blue-600 to-blue-500",
@@ -29,12 +29,12 @@ export default function RideCard({ provider, price, eta, rating, color, reliabil
                 {rating}
               </span>
             </div>
-            
+
             {/* Reliability Score */}
             {showReliability && (
               <div className="mt-2 flex items-center gap-2">
                 <div className="flex-1 bg-gray-700 rounded-full h-1.5 max-w-[80px]">
-                  <div 
+                  <div
                     className="bg-gradient-to-r from-blue-500 to-blue-400 h-1.5 rounded-full transition-all"
                     style={{ width: `${reliability}%` }}
                   ></div>
@@ -48,7 +48,13 @@ export default function RideCard({ provider, price, eta, rating, color, reliabil
         {/* Right: Price & Book */}
         <div className="text-right">
           <div className="text-xl font-bold text-white mb-2">{price}</div>
-          <button className="px-4 py-1.5 bg-blue-600 text-white text-xs font-medium rounded-lg group-hover:bg-blue-700 transition shadow-md shadow-blue-500/30">
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              if (onBook) onBook(estimateId || provider);
+            }}
+            className="px-4 py-1.5 bg-blue-600 text-white text-xs font-medium rounded-lg group-hover:bg-blue-700 transition shadow-md shadow-blue-500/30"
+          >
             Book
           </button>
         </div>
